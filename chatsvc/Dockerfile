@@ -9,7 +9,6 @@ COPY go.mod go.sum ./
 RUN go mod download && go mod verify
 
 COPY *.go ./
-COPY *.html /app/
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/chatsvc
 
@@ -23,6 +22,7 @@ FROM gcr.io/distroless/base-debian11 AS build-release-stage
 WORKDIR /app
 
 COPY --from=build-stage /app/* ./
+COPY *.html /app/
 
 EXPOSE 8080
 
