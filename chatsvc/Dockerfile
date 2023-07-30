@@ -26,6 +26,8 @@ COPY --from=build-stage /app/* ./
 
 EXPOSE 8080
 
-USER nonroot:nonroot
+# Must run as root to enable '-addr :80'
+# On GCE, the container runs with --network=host, meaning container ports map directly to host ports
+USER root:root
 
 ENTRYPOINT ["/app/chatsvc"]
