@@ -66,7 +66,7 @@ body {
     font-size: 16px
 }
 
-#log {
+#logContainer {
     background: white;
     margin: 0;
     padding: 0.5em 0.5em 0.5em 0.5em;
@@ -75,7 +75,15 @@ body {
     left: 0.5em;
     right: 0.5em;
     bottom: 3em;
+    display: flex;
+    flex-direction: column-reverse;
     overflow: auto;
+}
+
+#log {
+    margin: 0;
+    margin-top: auto;
+    padding: 0;
 }
 
 #form {
@@ -96,7 +104,7 @@ input[type="text"] {
 </style>
 </head>
 <body>
-<div id="log"></div>
+<div id="logContainer"><div id="log"></div></div>
 <form id="form">
     <table width="100%" style="box-sizing: border-box; padding: 0">
         <tr style="padding: 0">
