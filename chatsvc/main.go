@@ -5,9 +5,12 @@
 package main
 
 import (
+	"crypto/tls"
+	"encoding/base64"
 	"flag"
 	"log"
 	"net/http"
+	"os"
 )
 
 var addr = flag.String("addr", ":8080", "http service address")
@@ -33,11 +36,24 @@ func main() {
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(hub, w, r)
 	})
-	go func() {
-		log.Fatal(http.ListenAndServeTLS(":8443", "../../server.crt", "../../server.key", nil))
-	}()
-	err := http.ListenAndServe(*addr, nil)
+	tlsCert, err := base64.StdEncoding.DecodeString(os.Getenv("CHATSVC_TLS_CERT"))
 	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
+		log.Fatal("CHATSVC_TLS_CERT: not valid base64", err)
 	}
+	tlsPrivateKey, err := base64.StdEncoding.DecodeString(os.Getenv("CHATSVC_TLS_PRIVATE_KEY"))
+	if err != nil {
+		log.Fatal("CHATSVC_TLS_PRIVATE_KEY: not valid base64", err)
+	}
+	cert, err := tls.X509KeyPair(tlsCert, tlsPrivateKey)
+	if err != nil {
+		log.Fatal("CHATSVC_TLS_CERT or CHATSVC_TLS_PRIVATE_KEY: Bad cert or key", err)
+	}
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+	}
+	server := http.Server{
+		Addr:      *addr,
+		TLSConfig: tlsConfig,
+	}
+	log.Fatal(server.ListenAndServeTLS("", ""))
 }
