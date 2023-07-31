@@ -2,7 +2,7 @@ build:
 	docker build -t bartjacobs/chatsvc chatsvc
 
 run:
-	docker run -p 8080:8080 bartjacobs/chatsvc
+	docker run -e CHATSVC_TLS_CERT -e CHATSVC_TLS_PRIVATE_KEY -p 8443:8443 bartjacobs/chatsvc
 
 push:
 	docker push bartjacobs/chatsvc
