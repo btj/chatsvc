@@ -7,13 +7,27 @@ package main
 import (
 	"crypto/tls"
 	"encoding/base64"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"strings"
 )
+
+type User struct {
+	Name string `json:"name"`
+}
+
+type Session struct {
+	User string `json:"user"`
+}
+
+type Chatspace struct {
+	Name     string              `json:"name"`
+	Users    map[string]*User    `json:"users"`
+	Sessions map[string]*Session `json:"sessions"`
+}
 
 var addr = flag.String("addr", ":8443", "http service address")
 var useTls = flag.Bool("tls", true, "Use HTTPS")
@@ -32,9 +46,13 @@ func main() {
 	if flag.NArg() != 1 {
 		log.Fatal("Exactly one command-line argument expected")
 	}
-	chatspaceNames := strings.Split(flag.Arg(0), ",")
-	for _, chatspaceName := range chatspaceNames {
-		hub := newHub()
+	var chatspaces map[string]*Chatspace
+	err := json.Unmarshal([]byte(flag.Arg(0)), &chatspaces)
+	if err != nil {
+		log.Fatal("Command-line argument is not valid JSON", err)
+	}
+	for chatspaceName, chatspace := range chatspaces {
+		hub := newHub(chatspace)
 		go hub.run()
 		http.HandleFunc(fmt.Sprintf("/%s", chatspaceName), serveHome)
 		http.HandleFunc(fmt.Sprintf("/%s/ws", chatspaceName), func(w http.ResponseWriter, r *http.Request) {
