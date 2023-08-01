@@ -8,19 +8,18 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 )
 
 var addr = flag.String("addr", ":8443", "http service address")
+var useTls = flag.Bool("tls", true, "Use HTTPS")
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.URL)
-	if r.URL.Path != "/" {
-		http.Error(w, "Not found", http.StatusNotFound)
-		return
-	}
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -30,30 +29,40 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	flag.Parse()
-	hub := newHub()
-	go hub.run()
-	http.HandleFunc("/", serveHome)
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		serveWs(hub, w, r)
-	})
-	tlsCert, err := base64.StdEncoding.DecodeString(os.Getenv("CHATSVC_TLS_CERT"))
-	if err != nil {
-		log.Fatal("CHATSVC_TLS_CERT: not valid base64", err)
+	if flag.NArg() != 1 {
+		log.Fatal("Exactly one command-line argument expected")
 	}
-	tlsPrivateKey, err := base64.StdEncoding.DecodeString(os.Getenv("CHATSVC_TLS_PRIVATE_KEY"))
-	if err != nil {
-		log.Fatal("CHATSVC_TLS_PRIVATE_KEY: not valid base64", err)
+	chatspaceNames := strings.Split(flag.Arg(0), ",")
+	for _, chatspaceName := range chatspaceNames {
+		hub := newHub()
+		go hub.run()
+		http.HandleFunc(fmt.Sprintf("/%s", chatspaceName), serveHome)
+		http.HandleFunc(fmt.Sprintf("/%s/ws", chatspaceName), func(w http.ResponseWriter, r *http.Request) {
+			serveWs(hub, w, r)
+		})
 	}
-	cert, err := tls.X509KeyPair(tlsCert, tlsPrivateKey)
-	if err != nil {
-		log.Fatal("CHATSVC_TLS_CERT or CHATSVC_TLS_PRIVATE_KEY: Bad cert or key", err)
+	if *useTls {
+		tlsCert, err := base64.StdEncoding.DecodeString(os.Getenv("CHATSVC_TLS_CERT"))
+		if err != nil {
+			log.Fatal("CHATSVC_TLS_CERT: not valid base64", err)
+		}
+		tlsPrivateKey, err := base64.StdEncoding.DecodeString(os.Getenv("CHATSVC_TLS_PRIVATE_KEY"))
+		if err != nil {
+			log.Fatal("CHATSVC_TLS_PRIVATE_KEY: not valid base64", err)
+		}
+		cert, err := tls.X509KeyPair(tlsCert, tlsPrivateKey)
+		if err != nil {
+			log.Fatal("CHATSVC_TLS_CERT or CHATSVC_TLS_PRIVATE_KEY: Bad cert or key", err)
+		}
+		tlsConfig := &tls.Config{
+			Certificates: []tls.Certificate{cert},
+		}
+		server := http.Server{
+			Addr:      *addr,
+			TLSConfig: tlsConfig,
+		}
+		log.Fatal(server.ListenAndServeTLS("", ""))
+	} else {
+		log.Fatal(http.ListenAndServe(*addr, nil))
 	}
-	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-	}
-	server := http.Server{
-		Addr:      *addr,
-		TLSConfig: tlsConfig,
-	}
-	log.Fatal(server.ListenAndServeTLS("", ""))
 }
