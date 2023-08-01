@@ -109,11 +109,11 @@ func (c *Client) writePump() {
 
 // serveWs handles websocket requests from the peer.
 func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
-	sessionIds, ok := r.URL.Query()["sessionId"]
-	if !ok || len(sessionIds) != 1 {
+	sessionIdCookie, err := r.Cookie("sessionId")
+	if err != nil {
 		return
 	}
-	session, ok := hub.chatspace.Sessions[sessionIds[0]]
+	session, ok := hub.chatspace.Sessions[sessionIdCookie.Value]
 	if !ok {
 		return
 	}

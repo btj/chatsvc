@@ -54,6 +54,18 @@ func main() {
 	for chatspaceName, chatspace := range chatspaces {
 		hub := newHub(chatspace)
 		go hub.run()
+		currentChatspaceName := chatspaceName
+		http.HandleFunc(fmt.Sprintf("/%s/login", chatspaceName), func(w http.ResponseWriter, r *http.Request) {
+			sessionId := r.URL.Query().Get("sessionId")
+			var cookieModifiers string
+			if *useTls {
+				cookieModifiers = "; HttpOnly; SameSite=Strict; Secure"
+			} else {
+				cookieModifiers = "; HttpOnly; SameSite=Strict"
+			}
+			w.Header().Add("Set-Cookie", fmt.Sprintf("sessionId=%s%s", sessionId, cookieModifiers))
+			http.Redirect(w, r, fmt.Sprintf("../%s", currentChatspaceName), http.StatusSeeOther)
+		})
 		http.HandleFunc(fmt.Sprintf("/%s", chatspaceName), serveHome)
 		http.HandleFunc(fmt.Sprintf("/%s/ws", chatspaceName), func(w http.ResponseWriter, r *http.Request) {
 			serveWs(hub, w, r)
