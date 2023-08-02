@@ -46,7 +46,7 @@ function getUserFriendlyTimestamp(dateTime) {
 }
 window.onload = function () {
     var conn;
-    var channelspaceInfo;
+    var chatspaceInfo;
     var msg = document.getElementById("msg");
     var log = document.getElementById("log");
 
@@ -59,7 +59,7 @@ window.onload = function () {
     }
 
     function appendMessageToLog(message) {
-        let user = channelspaceInfo.users[message.userId];
+        let user = chatspaceInfo.users[message.userId];
         var userDiv = document.createElement("div");
         var userSpan = document.createElement("span");
         userSpan.className = "user";
@@ -100,7 +100,9 @@ window.onload = function () {
             appendLog(item);
         };
         conn.onmessage = function (evt) {
-            channelspaceInfo = JSON.parse(evt.data);
+            chatspaceInfo = JSON.parse(evt.data);
+            for (let msg of chatspaceInfo.messages)
+                appendMessageToLog(msg);
             conn.onmessage = function (evt) {
                 var message = JSON.parse(evt.data);
                 appendMessageToLog(message);

@@ -40,7 +40,7 @@ type Client struct {
 	conn *websocket.Conn
 
 	// Buffered channel of outbound messages.
-	send chan ChatMsg
+	send chan any
 }
 
 type ChatMsg struct {
@@ -53,6 +53,7 @@ type ChatspaceInfo struct {
 	Name     string           `json:"name"`
 	Users    map[string]*User `json:"users"`
 	Channels []string         `json:"channels"`
+	Messages []*ChatMsg       `json:"messages"`
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -76,7 +77,7 @@ func (c *Client) readPump() {
 			}
 			break
 		}
-		c.hub.broadcast <- ChatMsg{c.userId, time.Now().UnixMilli(), string(message)}
+		c.hub.broadcast <- &ChatMsg{c.userId, time.Now().UnixMilli(), string(message)}
 	}
 }
 
@@ -91,12 +92,6 @@ func (c *Client) writePump() {
 		ticker.Stop()
 		c.conn.Close()
 	}()
-	c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-	// Don't send the session IDs!! If in the future, User objects store credentials, don't send those either!
-	err := c.conn.WriteJSON(c.hub.chatspace.GetInfoForClient())
-	if err != nil {
-		return
-	}
 	for {
 		select {
 		case message, ok := <-c.send:
@@ -134,7 +129,7 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	client := &Client{hub: hub, userId: session.User, conn: conn, send: make(chan ChatMsg, 256)}
+	client := &Client{hub: hub, userId: session.User, conn: conn, send: make(chan any, 256)}
 	client.hub.register <- client
 
 	// Allow collection of memory referenced by the caller by doing all work in
