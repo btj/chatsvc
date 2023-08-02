@@ -40,12 +40,19 @@ type Client struct {
 	conn *websocket.Conn
 
 	// Buffered channel of outbound messages.
-	send chan Msg
+	send chan ChatMsg
 }
 
-type Msg struct {
-	UserId string `json:"userId"`
-	Msg    string `json:"msg"`
+type ChatMsg struct {
+	UserId     string `json:"userId"`
+	SentMillis int64  `json:"sentMillis"`
+	Msg        string `json:"msg"`
+}
+
+type ChatspaceInfo struct {
+	Name     string           `json:"name"`
+	Users    map[string]*User `json:"users"`
+	Channels []string         `json:"channels"`
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -69,7 +76,7 @@ func (c *Client) readPump() {
 			}
 			break
 		}
-		c.hub.broadcast <- Msg{c.userId, string(message)}
+		c.hub.broadcast <- ChatMsg{c.userId, time.Now().UnixMilli(), string(message)}
 	}
 }
 
@@ -127,7 +134,7 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	client := &Client{hub: hub, userId: session.User, conn: conn, send: make(chan Msg, 256)}
+	client := &Client{hub: hub, userId: session.User, conn: conn, send: make(chan ChatMsg, 256)}
 	client.hub.register <- client
 
 	// Allow collection of memory referenced by the caller by doing all work in

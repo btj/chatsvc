@@ -68,9 +68,9 @@ window.onload = function () {
         userDiv.appendChild(document.createTextNode(" "));
         var timestampSpan = document.createElement("span");
         timestampSpan.className = "timestamp";
-        let now = new Date();
-        timestampSpan.innerText = getUserFriendlyTimestamp(now);
-        timestampSpan.title = now;
+        let sent = new Date(message.sentMillis);
+        timestampSpan.innerText = getUserFriendlyTimestamp(sent);
+        timestampSpan.title = sent;
         userDiv.appendChild(timestampSpan);
         appendLog(userDiv);
         var msgItem = document.createElement("div");

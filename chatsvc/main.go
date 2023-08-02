@@ -30,9 +30,9 @@ type Chatspace struct {
 	Sessions map[string]*Session `json:"sessions"`
 }
 
-func (s *Chatspace) GetInfoForClient() *Chatspace {
+func (s *Chatspace) GetInfoForClient() *ChatspaceInfo {
 	// Don't send the session IDs!! If in the future, User objects store credentials, don't send those either!
-	return &Chatspace{Name: s.Name, Users: s.Users, Channels: s.Channels}
+	return &ChatspaceInfo{Name: s.Name, Users: s.Users, Channels: s.Channels}
 }
 
 var addr = flag.String("addr", ":8443", "http service address")

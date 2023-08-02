@@ -13,7 +13,7 @@ type Hub struct {
 	clients map[*Client]bool
 
 	// Inbound messages from the clients.
-	broadcast chan Msg
+	broadcast chan ChatMsg
 
 	// Register requests from the clients.
 	register chan *Client
@@ -25,7 +25,7 @@ type Hub struct {
 func newHub(chatspace *Chatspace) *Hub {
 	return &Hub{
 		chatspace:  chatspace,
-		broadcast:  make(chan Msg),
+		broadcast:  make(chan ChatMsg),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		clients:    make(map[*Client]bool),
