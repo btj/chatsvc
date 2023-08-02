@@ -5,6 +5,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"time"
@@ -44,7 +45,8 @@ type Client struct {
 }
 
 type ChatMsg struct {
-	UserId     string `json:"userId"`
+	From       string `json:"from"`
+	To         string `json:"to"`
 	SentMillis int64  `json:"sentMillis"`
 	Msg        string `json:"msg"`
 }
@@ -54,6 +56,11 @@ type ChatspaceInfo struct {
 	Users    map[string]*User `json:"users"`
 	Channels []string         `json:"channels"`
 	Messages []*ChatMsg       `json:"messages"`
+}
+
+type NewChatMsgClientMsg struct {
+	To  string `json:"to"`
+	Msg string `json:"msg"`
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -70,14 +77,19 @@ func (c *Client) readPump() {
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		_, message, err := c.conn.ReadMessage()
+		_, rawMessage, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
 			break
 		}
-		c.hub.broadcast <- &ChatMsg{c.userId, time.Now().UnixMilli(), string(message)}
+		var message NewChatMsgClientMsg
+		err = json.Unmarshal(rawMessage, &message)
+		if err != nil {
+			log.Print("Error unmarshalling message from client", err)
+		}
+		c.hub.broadcast <- &ChatMsg{From: c.userId, To: message.To, SentMillis: time.Now().UnixMilli(), Msg: message.Msg}
 	}
 }
 

@@ -49,6 +49,11 @@ window.onload = function () {
     var chatspaceInfo;
     var msg = document.getElementById("msg");
     var log = document.getElementById("log");
+    var channelSelect = document.getElementById("channel-select");
+
+    function selectedChannel() {
+        return chatspaceInfo.channels[channelSelect.selectedIndex];
+    }
 
     function appendLog(item) {
         var doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
@@ -59,7 +64,9 @@ window.onload = function () {
     }
 
     function appendMessageToLog(message) {
-        let user = chatspaceInfo.users[message.userId];
+        if (message.to != selectedChannel())
+            return;
+        let user = chatspaceInfo.users[message.from];
         var userDiv = document.createElement("div");
         var userSpan = document.createElement("span");
         userSpan.className = "user";
@@ -86,7 +93,7 @@ window.onload = function () {
         if (!msg.value) {
             return false;
         }
-        conn.send(msg.value);
+        conn.send(JSON.stringify({to: selectedChannel(), msg: msg.value}));
         msg.value = "";
         return false;
     };
@@ -101,10 +108,23 @@ window.onload = function () {
         };
         conn.onmessage = function (evt) {
             chatspaceInfo = JSON.parse(evt.data);
+            document.getElementById('header').innerText = chatspaceInfo.name;
+            for (let channel of chatspaceInfo.channels) {
+                let option = new Option('#'+channel);
+                option.selected = channel == 'general';
+                channelSelect.appendChild(option);
+            }
+            channelSelect.onchange = () => {
+                while (log.hasChildNodes())
+                    log.removeChild(log.firstChild);
+                for (let msg of chatspaceInfo.messages)
+                    appendMessageToLog(msg);
+            };
             for (let msg of chatspaceInfo.messages)
                 appendMessageToLog(msg);
             conn.onmessage = function (evt) {
                 var message = JSON.parse(evt.data);
+                chatspaceInfo.messages.push(message);
                 appendMessageToLog(message);
             };
         };
@@ -135,7 +155,7 @@ body {
     margin: 0;
     padding: 0.5em 0.5em 0.5em 0.5em;
     position: absolute;
-    top: 0.5em;
+    top: 3em;
     left: 0.5em;
     right: 0.5em;
     bottom: 3em;
@@ -161,6 +181,11 @@ body {
     overflow: hidden;
 }
 
+#header {
+    font-size: larger;
+    font-weight: bold;
+}
+
 span.user {
     font-weight: bold
 }
@@ -176,6 +201,8 @@ input[type="text"] {
 </style>
 </head>
 <body>
+<div id="header"></div>
+<div><select id="channel-select"></select></div>
 <div id="logContainer"><div id="log"></div></div>
 <form id="form">
     <table width="100%" style="box-sizing: border-box; padding: 0">
