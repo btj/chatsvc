@@ -46,6 +46,7 @@ function getUserFriendlyTimestamp(dateTime) {
 }
 window.onload = function () {
     var conn;
+    var channelspaceInfo;
     var msg = document.getElementById("msg");
     var log = document.getElementById("log");
 
@@ -55,6 +56,27 @@ window.onload = function () {
         if (doScroll) {
             log.scrollTop = log.scrollHeight - log.clientHeight;
         }
+    }
+
+    function appendMessageToLog(message) {
+        let user = channelspaceInfo.users[message.userId];
+        var userDiv = document.createElement("div");
+        var userSpan = document.createElement("span");
+        userSpan.className = "user";
+        userSpan.innerText = user.name;
+        userDiv.appendChild(userSpan);
+        userDiv.appendChild(document.createTextNode(" "));
+        var timestampSpan = document.createElement("span");
+        timestampSpan.className = "timestamp";
+        let now = new Date();
+        timestampSpan.innerText = getUserFriendlyTimestamp(now);
+        timestampSpan.title = now;
+        userDiv.appendChild(timestampSpan);
+        appendLog(userDiv);
+        var msgItem = document.createElement("div");
+        msgItem.className = 'msg';
+        msgItem.innerText = message.msg;
+        appendLog(msgItem);
     }
 
     document.getElementById("form").onsubmit = function () {
@@ -78,24 +100,11 @@ window.onload = function () {
             appendLog(item);
         };
         conn.onmessage = function (evt) {
-            var message = JSON.parse(evt.data);
-            var userDiv = document.createElement("div");
-            var userSpan = document.createElement("span");
-            userSpan.className = "user";
-            userSpan.innerText = message.user.name;
-            userDiv.appendChild(userSpan);
-            userDiv.appendChild(document.createTextNode(" "));
-            var timestampSpan = document.createElement("span");
-            timestampSpan.className = "timestamp";
-            let now = new Date();
-            timestampSpan.innerText = getUserFriendlyTimestamp(now);
-            timestampSpan.title = now;
-            userDiv.appendChild(timestampSpan);
-            appendLog(userDiv);
-            var msgItem = document.createElement("div");
-            msgItem.className = 'msg';
-            msgItem.innerText = message.msg;
-            appendLog(msgItem);
+            channelspaceInfo = JSON.parse(evt.data);
+            conn.onmessage = function (evt) {
+                var message = JSON.parse(evt.data);
+                appendMessageToLog(message);
+            };
         };
     } else {
         var item = document.createElement("div");

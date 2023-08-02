@@ -45,7 +45,6 @@ type Client struct {
 
 type Msg struct {
 	UserId string `json:"userId"`
-	User   *User  `json:"user"`
 	Msg    string `json:"msg"`
 }
 
@@ -70,7 +69,7 @@ func (c *Client) readPump() {
 			}
 			break
 		}
-		c.hub.broadcast <- Msg{c.userId, c.hub.chatspace.Users[c.userId], string(message)}
+		c.hub.broadcast <- Msg{c.userId, string(message)}
 	}
 }
 
@@ -85,6 +84,12 @@ func (c *Client) writePump() {
 		ticker.Stop()
 		c.conn.Close()
 	}()
+	c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+	// Don't send the session IDs!! If in the future, User objects store credentials, don't send those either!
+	err := c.conn.WriteJSON(c.hub.chatspace.GetInfoForClient())
+	if err != nil {
+		return
+	}
 	for {
 		select {
 		case message, ok := <-c.send:
